@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"github.com/sundywy/stock-kinesis/model"
+	"go.uber.org/atomic"
 )
 
 type stockPrice struct {
@@ -12,11 +13,9 @@ type stockPrice struct {
 	Price        float64
 }
 
-type StockTradeGenerator struct {
-	stocks []*stockPrice
-}
+type StockTradeGenerator []*stockPrice
 
-func New() *StockTradeGenerator {
+func NewGenerator() StockTradeGenerator {
 	data := map[string]float64{
 		"AAPL":  119.72,
 		"XOM":   91.56,
@@ -47,18 +46,10 @@ func New() *StockTradeGenerator {
 
 	var g StockTradeGenerator
 	for k, v := range data {
-		g.stocks = append(g.stocks, &stockPrice{TickerSymbol: k, Price: v})
+		g = append(g, &stockPrice{TickerSymbol: k, Price: v})
 	}
 
-	return &g
-}
-
-func (g *StockTradeGenerator) Get(id int) *stockPrice {
-	return g.stocks[id]
-}
-
-func (g *StockTradeGenerator) Len() int {
-	return len(g.stocks)
+	return g
 }
 
 const (
@@ -67,10 +58,11 @@ const (
 	probabilitySell = 0.4
 )
 
-func (g *StockTradeGenerator) GetRandomTrade() *model.StockTrade {
+var counter = atomic.NewInt32(0)
 
-	id := rand.Intn(g.Len())
-	stockPrice := g.Get(id)
+func (g StockTradeGenerator) GetRandomTrade() *model.StockTrade {
+
+	stockPrice := g[rand.Intn(len(g))]
 
 	deviation := (rand.Float64() - 0.5) * 2.0 * maxDeviation
 	price := stockPrice.Price * (1 + deviation)
@@ -86,5 +78,5 @@ func (g *StockTradeGenerator) GetRandomTrade() *model.StockTrade {
 
 	quantity := rand.Intn(maxQuantity) + 1
 
-	return model.New(stockPrice.TickerSymbol, tradeType, price, quantity, id)
+	return model.New(stockPrice.TickerSymbol, tradeType, price, quantity, int(counter.Inc()))
 }

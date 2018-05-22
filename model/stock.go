@@ -8,7 +8,7 @@ import (
 type TradeType int
 
 const (
-	Buy TradeType = iota + 1
+	Buy TradeType = iota
 	Sell
 )
 
