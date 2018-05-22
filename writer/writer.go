@@ -1,6 +1,11 @@
 package writer
 
 import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 )
 
@@ -14,9 +19,20 @@ type StockTradesWriter struct {
 	generator StockTradeGenerator
 }
 
-func NewWriter(config *Config) *StockTradesWriter {
+func NewWriter(streamName, region string) (*StockTradesWriter, error) {
 
-	return &StockTradesWriter{config, NewGenerator()}
+	awsConfig := aws.NewConfig().
+		WithCredentials(credentials.NewEnvCredentials()).
+		WithRegion(region)
+
+	session, err := session.NewSession(awsConfig)
+	if err != nil {
+		return nil, fmt.Errorf(`Unable to create session. %v`, err)
+	}
+
+	kinesis := kinesis.New(session)
+
+	return &StockTradesWriter{&Config{Kinesis: kinesis, StreamName: streamName}, NewGenerator()}, nil
 }
 
 func (w *StockTradesWriter) SendStockTrade() error {

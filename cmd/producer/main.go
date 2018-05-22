@@ -3,10 +3,6 @@ package main
 import (
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/sundywy/stock-kinesis/writer"
 )
 
@@ -16,7 +12,12 @@ const (
 )
 
 func main() {
-	writer := getNewWriter()
+
+	writer, err := writer.NewWriter(streamName, region)
+	if err != nil {
+		log.Fatalf(`Error in creating writer. %v`, err)
+	}
+
 	if err := writer.ValidateStream(); err != nil {
 		log.Fatalf(`Error in validating stream. %v`, err)
 	}
@@ -24,17 +25,4 @@ func main() {
 	for {
 		writer.SendStockTrade()
 	}
-}
-
-func getNewWriter() *writer.StockTradesWriter {
-
-	config := aws.NewConfig().
-		WithCredentials(credentials.NewEnvCredentials()).
-		WithRegion(region)
-
-	session, _ := session.NewSession(config)
-	kinesis := kinesis.New(session)
-
-	return writer.NewWriter(&writer.Config{Kinesis: kinesis, StreamName: streamName})
-
 }
