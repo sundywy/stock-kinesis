@@ -22,7 +22,7 @@ type StockTradesWriter struct {
 func NewWriter(streamName, region string) (*StockTradesWriter, error) {
 
 	awsConfig := aws.NewConfig().
-		WithCredentials(credentials.NewEnvCredentials()).
+		WithCredentials(credentials.NewSharedCredentials("", "")).
 		WithRegion(region)
 
 	session, err := session.NewSession(awsConfig)

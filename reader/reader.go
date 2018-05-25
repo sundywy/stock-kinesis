@@ -21,7 +21,7 @@ type StockTradesReader struct {
 
 func NewReader(streamName, region string) (*StockTradesReader, error) {
 	awsConfig := aws.NewConfig().
-		WithCredentials(credentials.NewEnvCredentials()).
+		WithCredentials(credentials.NewSharedCredentials("", "")).
 		WithRegion(region)
 
 	session, err := session.NewSession(awsConfig)
@@ -36,8 +36,37 @@ func NewReader(streamName, region string) (*StockTradesReader, error) {
 
 func (r *StockTradesReader) GetStockTrade() (*model.StockTrade, error) {
 
+	describeStreamInput := (&kinesis.DescribeStreamInput{}).
+		SetStreamName(r.StreamName)
+
+	streamOutput, err := r.DescribeStream(describeStreamInput)
+	if err != nil {
+		return nil, err
+	}
+
+	shardID := *(streamOutput.StreamDescription.Shards[0]).ShardId
+
+	getShardIteratorInput := (&kinesis.GetShardIteratorInput{}).
+		SetShardId(shardID).
+		SetShardIteratorType("LATEST").
+		SetStreamName(r.StreamName)
+
+	if err := getShardIteratorInput.Validate(); err != nil {
+		return nil, err
+	}
+
+	shardIterator, err := r.GetShardIterator(getShardIteratorInput)
+	if err != nil {
+		return nil, err
+	}
+
 	input := (&kinesis.GetRecordsInput{}).
-		SetLimit(1)
+		SetLimit(1).
+		SetShardIterator(*shardIterator.ShardIterator)
+
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
 
 	output, err := r.GetRecords(input)
 	if err != nil {
